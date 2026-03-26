@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>152題單字：究極學習系統</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f1f5f9; --card-front: #ffffff; --card-back: #eff6ff; --red: #ef4444; --orange: #f59e0b; --green: #10b981; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); padding: 20px; color: #1e293b; }
+        .container { max-width: 1100px; margin: auto; }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 10px; }
+
+        /* 工具列 */
+        .toolbar { position: sticky; top: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px; }
+        .search-box { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 16px; outline: none; box-sizing: border-box; }
+        .mode-switch { display: flex; justify-content: center; gap: 10px; margin-bottom: 5px; }
+        .mode-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: #334155; color: white; transition: 0.2s; }
+        .mode-btn.active { background: var(--primary); transform: scale(1.05); }
+
+        /* 清除按鈕樣式 */
+        .clear-btn { background: #64748b; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; align-self: center; transition: 0.2s; }
+        .clear-btn:hover { background: #475569; }
+
+        .filter-group { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+        .filter-btn { padding: 6px 14px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; background: #e2e8f0; font-size: 0.85rem; }
+        .filter-btn.active { color: white; }
+        .btn-all.active { background: var(--primary); }
+        .btn-hard.active { background: var(--red); }
+        .btn-mid.active { background: var(--orange); }
+        .btn-easy.active { background: var(--green); }
+
+        .word-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* 3D 卡片 */
+        .flashcard { width: 100%; height: 260px; perspective: 1000px; cursor: pointer; display: block; }
+        .flashcard-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 15px; padding: 15px; box-sizing: border-box; border: 1px solid #e2e8f0; }
+        .card-front { background: var(--card-front); transition: border 0.3s; }
+        .card-back { background: var(--card-back); transform: rotateY(180deg); border: 2px solid var(--primary); }
+
+        /* 測驗模式 */
+        .quiz-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 2px solid #e2e8f0; transition: border 0.3s; }
+        .quiz-zh { font-size: 1.2rem; font-weight: bold; color: #334155; margin-bottom: 5px; }
+        .quiz-input { width: 100%; padding: 10px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; text-align: center; color: var(--primary); outline: none; margin: 10px 0; }
+        .quiz-input.correct { border-color: var(--green); background: #f0fdf4; }
+        .quiz-input.wrong { border-color: var(--red); background: #fef2f2; }
+
+        /* 狀態邊框 */
+        [data-status="hard"] .card-front, .quiz-card[data-status="hard"] { border: 4px solid var(--red); }
+        [data-status="mid"] .card-front, .quiz-card[data-status="mid"] { border: 4px solid var(--orange); }
+        [data-status="easy"] .card-front, .quiz-card[data-status="easy"] { border: 4px solid var(--green); }
+
+        .word-eng { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+        .word-kk { color: #64748b; font-size: 0.9rem; margin-bottom: 10px; }
+        
+        /* 介系詞搭配樣式優化 */
+        .word-usage { font-size: 0.85rem; color: #1e293b; background: #fff; padding: 10px; border-radius: 8px; border-left: 4px solid var(--red); width: 100%; margin-top: 5px; text-align: left; line-height: 1.4; }
+        .usage-tag { font-weight: bold; color: var(--red); display: inline-block; margin-bottom: 3px; }
+        .hidden-usage { display: none; }
+
+        .status-btns { display: flex; gap: 5px; margin-top: 10px; width: 100%; }
+        .status-btns button { flex: 1; padding: 6px; border-radius: 5px; border: 2px solid transparent; cursor: pointer; color: white; font-size: 0.7rem; font-weight: bold; opacity: 0.4; transition: 0.2s; }
+        .status-btns button.selected { opacity: 1; border-color: white; transform: scale(1.05); }
+        .btn-red { background: var(--red); }
+        .btn-orange { background: var(--orange); }
+        .btn-green { background: var(--green); }
+        .speak-btn { background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; margin: 5px 0; font-weight: bold; font-size: 0.8rem; }
+        .toggle-usage-btn { background: #f1f5f9; color: #64748b; border: 1px dashed #cbd5e1; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 152 題全能學習系統 (究極版)</h1>
+    
+    <div class="toolbar">
+        <div class="mode-switch">
+            <button id="btnCardMode" class="mode-btn active" onclick="switchMode('card')">🎴 卡片模式</button>
+            <button id="btnQuizMode" class="mode-btn" onclick="switchMode('quiz')">✍️ 測驗模式</button>
+        </div>
+        
+        <button id="clearQuizBtn" class="clear-btn" style="display:none;" onclick="clearAllQuiz()">🧹 清除所有答案</button>
+
+        <input type="text" id="searchInput" class="search-box" placeholder="搜尋單字、中文..." oninput="render()">
+        
+        <div class="filter-group">
+            <button class="filter-btn btn-all active" onclick="setFilter('all', this)">全部</button>
+            <button class="filter-btn btn-hard" onclick="setFilter('hard', this)">不熟 ❌</button>
+            <button class="filter-btn btn-mid" onclick="setFilter('mid', this)">普通 ⚠️</button>
+            <button class="filter-btn btn-easy" onclick="setFilter('easy', this)">完美 ✅</button>
+        </div>
+    </div>
+
+    <div id="mainGrid" class="word-grid"></div>
+</div>
+
+<script>
+    const vocabulary = [
+        ["trend", "/trɛnd/", "n.", "趨勢", "trend [towards/in] (朝向...的趨勢)"],
+        ["similarity", "/ˌsɪmɪˈlærətɪ/", "n.", "相似之處", "similarity [between] A [and] B / [to] A"],
+        ["ready-to-wear", "/ˈrɛdɪtəˌwɛr/", "adj.", "成衣的", "ready-to-wear collections"],
+        ["emerge", "/ɪˈmɝdʒ/", "v.", "出現", "emerge [from] (從...出現) / [as] (以...身份)"],
+        ["tempt", "/tɛmpt/", "v.", "誘惑", "tempt sb [into] Ving / be tempted [to] V"],
+        ["achieve", "/əˈtʃiv/", "v.", "達成", "achieve success [in] a field"],
+        ["establish oneself as", "/əˈstæblɪʃ/", "phr.", "以⋯確立地位", "establish oneself [as] an authority [in]"],
+        ["manufacture", "/ˌmænjəˈfæktʃɚ/", "v.", "製造", "manufacture products [for] sale"],
+        ["feedback", "/ˈfidˌbæk/", "n.", "回饋", "feedback [on/about] (關於...的回饋)"],
+        ["imitate", "/ˈɪməˌtet/", "v.", "模仿", "imitate sb [in] some way"],
+        ["guilty", "/ˈɡɪltɪ/", "adj.", "有罪的", "be guilty [of] a crime / feel guilty [about]"],
+        ["creative", "/krɪˈetɪv/", "adj.", "有創意的", "creative [in] one's thinking"],
+        ["necessity", "/nəˈsɛsətɪ/", "n.", "必需品", "the necessity [for/of] / out [of] necessity"],
+        ["cunning", "/ˈkʌnɪŋ/", "adj.", "狡猾的", "be cunning [at] tricking people"],
+        ["inspire", "/ɪnˈspaɪr/", "v.", "啟發", "inspire sb [with] sth / [to] do sth"],
+        ["in a sense", "/ɪn ə sɛns/", "phr.", "就某方面而言", "i_ a s_ _ _e (就某方面而言)"],
+        ["discouraging", "/dɪˈskɝɪdʒɪŋ/", "adj.", "令人沮喪的", "discouraging [to] students"],
+        ["in short", "/ɪn ʃɔrt/", "phr.", "簡而言之", "i_ s_ _ _t (總之)"],
+        ["advantage", "/ədˈvæntɪdʒ/", "n.", "優點", "take advantage [of] / have an advantage [over]"],
+        ["reward", "/rɪˈwɔrd/", "v.", "獎勵", "reward sb [for] sth / [with] a prize"],
+        ["originality", "/əˌrɪdʒəˈnælətɪ/", "n.", "原創性", "the originality [of] a design"],
+        ["copycat", "/ˈkɑpɪˌkæt/", "n.", "仿效者", "copycat behavior"],
+        ["replication", "/ˌrɛplɪˈkeʃən/", "n.", "複製", "the replication [of] a study"],
+        ["accessory", "/ækˈsɛsərɪ/", "n.", "配件", "accessory [to] an outfit"],
+        ["intellectual copyright", "/ˌɪntəˈlɛktʃuəl/", "n.", "智慧財產權", "protect copyright [from] infringement"],
+        ["logo", "/ˈloɡo/", "n.", "標誌", "the logo [of] a brand"],
+        ["retail", "/ˈritel/", "n.", "零售", "sell [at] retail price"],
+        ["retailer", "/ˈritelɚ/", "n.", "零售商", "major retailer [of] clothing"],
+        ["flattery", "/ˈflætərɪ/", "n.", "奉承", "yield [to] flattery"],
+        ["renowned", "/rɪˈnaʊnd/", "adj.", "著名的", "be renowned [for] one's work"],
+        ["foothold", "/ˈfʊtˌhold/", "n.", "立足點", "gain a foothold [in] a market"],
+        ["frayed", "/fred/", "adj.", "磨損的", "frayed [at] the edges"],
+        ["denim", "/ˈdɛnɪm/", "n.", "牛仔丹寧布", "made [of] denim"],
+        ["psychologist", "/saɪˈkɑlədʒɪst/", "n.", "心理學家", "psychologist [specializing in]"],
+        ["perseverance", "/ˌpɝsəˈvɪrəns/", "n.", "毅力", "perseverance [in] the face [of] difficulties"],
+        ["passion", "/ˈpæʃən/", "n.", "熱情", "have a passion [for] sth"],
+        ["in response to", "/ɪn rɪˈspɑns/", "phr.", "回應", "i_ r_ _ _ _ _ _e t_ (回應...)"],
+        ["account for", "/əˈkaʊnt fɔr/", "phr.", "解釋/占多少", "account [for] the increase [in] sales"],
+        ["moderately", "/ˈmɑdərətlɪ/", "adv.", "中等地", "moderately successful [in] life"],
+        ["survivor", "/sɚˈvaɪvɚ/", "n.", "倖存者", "survivor [of] a disaster"],
+        ["competitive", "/kəmˈpɛtətɪv/", "adj.", "競爭的", "be competitive [with] others"],
+        ["determination", "/dɪˌtɝməˈneʃən/", "n.", "決心", "determination [to] do sth"],
+        ["appealing", "/əˈpilɪŋ/", "adj.", "吸引人的", "be appealing [to] customers"],
+        ["concept", "/ˈkɑnsɛpt/", "n.", "概念", "the concept [of] freedom"],
+        ["education", "/ˌɛdʒəˈkeʃən/", "n.", "教育", "education [in] a subject"],
+        ["give priority to", "/ɡɪv praɪˈɔrətɪ/", "phr.", "優先考慮", "give priority [to] safety"],
+        ["essential", "/ɪˈsɛnʃəl/", "adj.", "必要的", "be essential [to] success"],
+        ["appropriate", "/əˈproprɪɪt/", "adj.", "合宜的", "appropriate [for] the weather"],
+        ["talent", "/ˈtælənt/", "n.", "天賦", "have a talent [for] arts"],
+        ["background", "/ˈbækˌɡraʊnd/", "n.", "背景", "background [in/of]"],
+        ["stick with", "/stɪk wɪð/", "phr.", "堅持", "stick [with] it to the end"],
+        ["grit", "/ɡrɪt/", "n.", "恆毅力", "show grit [in] a crisis"],
+        ["eloquent", "/ˈɛləkwənt/", "adj.", "雄辯", "be eloquent [on] a topic"],
+        ["long-term", "/ˈlɔŋˈtɝm/", "adj.", "長期的", "long-term impact [on]"],
+        ["persistent", "/pɚˈsɪstənt/", "adj.", "堅持不懈", "be persistent [in] pursuit [of]"],
+        ["attribute", "/ˈæt rəˌbjut/", "n.", "特質", "attribute [of] character"],
+        ["mediocre", "/ˌmidɪˈokɚ/", "adj.", "平凡", "mediocre [at] a task"],
+        ["resilience", "/rɪˈzɪlɪəns/", "n.", "復原力", "resilience [to] stress"],
+        ["pin one's hopes on", "/pɪn hop/", "phr.", "寄託希望", "pin hopes [on] success"],
+        ["prevail", "/prɪˈvel/", "v.", "普及", "prevail [over] an enemy"],
+        ["reformer", "/rɪˈfɔrmɚ/", "n.", "改革者", "reformer [of] society"],
+        ["parenting", "/ˈpɛrəntɪŋ/", "n.", "教養", "styles [of] parenting"],
+        ["thoughtfulness", "/ˈθɔtfəlnɪs/", "n.", "體貼", "thoughtfulness [toward] people"],
+        ["integrity", "/ɪnˈtɛɡrətɪ/", "n.", "正直", "integrity [in] character"],
+        ["crucial", "/ˈkruʃəl/", "adj.", "關鍵", "crucial [to] the outcome"],
+        ["contributor", "/kənˈtrɪbjətɚ/", "n.", "貢獻者", "contributor [to] a cause"],
+        ["garage", "/ɡəˈrɑʒ/", "n.", "車庫", "garage [for] cars"],
+        ["household", "/ˈhaʊshold/", "n.", "家庭", "household [of] four"],
+        ["barn", "/bɑrn/", "n.", "穀倉", "barn [for] cows"],
+        ["kangaroo", "/ˌkæŋɡəˈru/", "n.", "袋鼠", "kangaroo [in] the wild"],
+        ["risk", "/rɪsk/", "v.", "冒險", "risk [at] stake / risk [in] doing"],
+        ["capture", "/ˈkæptʃɚ/", "v.", "擄獲", "capture [on] film"],
+        ["endangered", "/ɪnˈdendʒɚd/", "adj.", "瀕危", "endangered [by] humans"],
+        ["on impulse", "/ɑn ˈɪmpʌls/", "phr.", "衝動", "o_ i_ _ _ _ _e"],
+        ["resist", "/rɪˈzɪst/", "v.", "抵抗", "resist [to] (不常用)"],
+        ["temptation", "/tɛmpˈteʃən/", "n.", "誘惑", "temptation [to] V"],
+        ["welfare", "/ˈwɛlfɛr/", "n.", "福祉", "welfare [of] the state"],
+        ["condemn", "/kənˈdɛm/", "v.", "譴責", "condemn sb [for] sth"],
+        ["cruel", "/ˈkruəl/", "adj.", "殘忍", "be cruel [to] sb"],
+        ["criminal", "/ˈkrɪmənəl/", "adj.", "犯罪", "criminal case [against]"],
+        ["issue", "/ˈɪʃu/", "n.", "議題", "issue [of] debate"],
+        ["exotic", "/ɪɡˈzɑtɪk/", "adj.", "異國", "exotic [to] the area"],
+        ["backyard", "/ˈbækˈjɑrd/", "n.", "後院", "in the backyard"],
+        ["trainer", "/ˈtrenɚ/", "n.", "訓練者", "trainer [for] pets"],
+        ["gypsy", "/ˈdʒɪpsɪ/", "adj.", "吉普賽", "gypsy camp"],
+        ["fencing", "/ˈfɛnsɪŋ/", "n.", "離笆", "fencing [around] the yard"],
+        ["lemur", "/ˈlimɚ/", "n.", "狐猴", "lemur [in] trees"],
+        ["raccoon", "/ræˈkun/", "n.", "浣熊", "raccoon [at] night"],
+        ["kinkajou", "/ˈkɪŋkədʒu/", "n.", "蜜熊", "kinkajou [in] forests"],
+        ["diaper", "/ˈdaɪpɚ/", "v.", "包尿布", "diaper [for] a baby"],
+        ["adorable", "/əˈdɔrəbl/", "adj.", "可愛", "adorable [to] adults"],
+        ["domesticated", "/dəˈmɛstɪˌketɪd/", "adj.", "馴化", "domesticated [by] farmers"],
+        ["activist", "/ˈæktəvɪst/", "n.", "激進份子", "activist [for] peace"],
+        ["conservationist", "/ˌkɑnsɚˈveʃənɪst/", "n.", "保育人士", "conservationist [of] nature"],
+        ["immoral", "/ɪˈmɔrəl/", "adj.", "不道德", "immoral [in] nature"],
+        ["economy", "/ɪˈkɑnəmɪ/", "n.", "經濟", "growth [of] the economy"],
+        ["weaken", "/ˈwikən/", "v.", "使虛弱", "weaken the influence [of]"],
+        ["rate", "/ret/", "n.", "率", "rate [of] exchange"],
+        ["goods", "/ɡʊdz/", "n.", "物品", "goods [for] export"],
+        ["reduced", "/rɪˈdust/", "adj.", "下降", "reduced [at] half price"],
+        ["zipper", "/ˈzɪpɚ/", "n.", "拉鍊", "zipper [on] the jacket"],
+        ["minister", "/ˈmɪnɪstɚ/", "n.", "部長", "minister [of] state"],
+        ["financial", "/faɪˈnænʃəl/", "adj.", "財務", "financial aid [for]"],
+        ["domestic", "/dəˈmɛstɪk/", "adj.", "國內", "domestic life [in]"],
+        ["tend", "/tɛnd/", "v.", "傾向於", "tend [to] V"],
+        ["product", "/ˈprɑdəkt/", "n.", "產品", "product [of] labor"],
+        ["someday", "/ˈsʌmˌde/", "adv.", "某天", "someday [in] the future"],
+        ["durable", "/ˈdʊrəbl/", "adj.", "耐用", "durable [against] rain"],
+        ["intensive", "/ɪnˈtɛnsɪv/", "adj.", "密集", "intensive care [for]"],
+        ["labor", "/ˈlebɚ/", "n.", "勞力", "labor [in] factories"],
+        ["immigrant", "/ˈɪməɡrənt/", "n.", "移民", "immigrant [from] abroad"],
+        ["promote", "/prəˈmot/", "v.", "促進", "promote awareness [of]"],
+        ["moral", "/ˈmɔrəl/", "adj.", "道德", "moral support [from]"],
+        ["economically", "/ˌikəˈnɑmɪklɪ/", "adv.", "經濟上", "economically dependent [on]"],
+        ["boost", "/bust/", "v.", "提高", "boost production [of]"],
+        ["nudge", "/nʌdʒ/", "v.", "輕推", "nudge sb [into] Ving"],
+        ["consumption", "/kənˈsʌmpʃən/", "n.", "消費", "consumption [of] food"],
+        ["appliance", "/əˈplaɪəns/", "n.", "家電", "appliance [for] cooking"],
+        ["belongings", "/bɪˈlɔŋɪŋz/", "n.", "所有物", "belongings [of] guests"],
+        ["tax break", "/tæks brek/", "n.", "減稅", "tax break [for] users"],
+        ["grant", "/ɡrænt/", "v.", "賦予", "grant permission [to] V"],
+        ["throwaway", "/ˈθroəˌwe/", "adj.", "一次性", "throwaway culture [in] city"],
+        ["affordable", "/əˈfɔrdəbl/", "adj.", "負擔得起", "affordable [to] poor"],
+        ["sociologist", "/ˌsosɪˈɑlədʒɪst/", "n.", "社會學家", "sociologist [from] USA"],
+        ["unemployment", "/ˌʌnɪmˈplɔɪmənt/", "n.", "失業", "unemployment [of] workers"],
+        ["rational", "/ˈræʃənəl/", "adj.", "理性", "rational [in] judgment"],
+        ["victim", "/ˈvɪktɪm/", "n.", "受害者", "victim [of] war"],
+        ["shelter in place", "/ˈʃɛltɚ/", "phr.", "就地安置", "s_ _ _ _ _r i_ p_ _ _e"],
+        ["have access to", "/hæv ˈæksɛs/", "phr.", "取得", "h_ _e a_ _ _ _s t_"],
+        ["have no choice but", "/no tʃɔɪs/", "phr.", "不得不", "h_ _e n_ c_ _ _ _e b_t"],
+        ["have trouble", "/ˈtrʌbl/", "phr.", "做⋯有困難", "h_ _e t_ _ _ _ _e"],
+        ["fall short of", "/fɔl ʃɔrt/", "phr.", "缺乏", "f_ _l s_ _ _t o_"],
+        ["digital", "/ˈdɪdʒɪtl/", "adj.", "數位", "digital media [for]"],
+        ["probably", "/ˈprɑbəblɪ/", "adv.", "可能", "probably [in] July"],
+        ["communication", "/kəˌmjunəˈkeʃən/", "n.", "溝通", "communication [with] sb"],
+        ["peer", "/pɪr/", "n.", "同儕", "peer pressure [from]"],
+        ["rage", "/redʒ/", "v.", "肆虐", "rage [on]"],
+        ["remotely", "/rɪˈmotlɪ/", "adv.", "遠端", "remotely located [from]"],
+        ["appeal to", "/əˈpil tʊ/", "phr.", "呼籲/吸引", "appeal [to] sb [for] sth"],
+        ["terrific", "/təˈrɪfɪk/", "adj.", "極佳", "terrific news [for]"],
+        ["lockdown", "/ˈlɑkˌdaʊn/", "n.", "封城", "lockdown [in] Paris"],
+        ["COVID-19", "/ˈkovɪd/", "n.", "新冠肺炎", "COVID-19 [in] 2020"],
+        ["rampant", "/ˈræmpənt/", "adj.", "肆虐", "rampant [among] poor"],
+        ["aide", "/ed/", "n.", "助理員", "aide [to] the boss"],
+        ["individualized", "/ˌɪndəˈvɪdʒuəˌlaɪzd/", "adj.", "個人化", "individualized instruction [for]"],
+        ["tailor", "/ˈtelɚ/", "v.", "量身訂製", "tailor A [to/for] B"],
+        ["autism", "/ˈɔtɪzəm/", "n.", "自閉症", "autism spectrum [in]"],
+        ["reciprocal", "/rɪˈsɪprəkl/", "adj.", "相互", "reciprocal help [between]"],
+        ["virtual", "/ˈvɝtʃuəl/", "adj.", "虛擬", "virtual reality [for]"],
+        ["consistency", "/kənˈsɪstənsɪ/", "n.", "一致性", "consistency [with] policy"],
+        ["unsuitable", "/ʌnˈsutəbl/", "adj.", "不適合", "unsuitable [for] children"],
+        ["original", "/əˈrɪdʒənəl/", "adj.", "原創", "original work [by]"]
+    ];
+
+    let appMode = 'card';
+    let currentFilter = 'all';
+    let wordStatus = JSON.parse(localStorage.getItem('wordStatus152')) || {};
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'en-US';
+        utter.rate = 0.9;
+        window.speechSynthesis.speak(utter);
+    }
+
+    function switchMode(mode) {
+        appMode = mode;
+        document.getElementById('btnCardMode').classList.toggle('active', mode === 'card');
+        document.getElementById('btnQuizMode').classList.toggle('active', mode === 'quiz');
+        
+        // 只有測驗模式才顯示「清除按鈕」
+        document.getElementById('clearQuizBtn').style.display = (mode === 'quiz') ? 'block' : 'none';
+        render();
+    }
+
+    function toggleStatus(word, status, event) {
+        if (event) event.stopPropagation();
+        wordStatus[word] = (wordStatus[word] === status) ? 'none' : status;
+        localStorage.setItem('wordStatus152', JSON.stringify(wordStatus));
+        render();
+    }
+
+    function getPrompt(word) {
+        return word.split(' ').map(w => w.length <= 1 ? w : w[0] + "_".repeat(w.length - 2) + w[w.length-1]).join(' ');
+    }
+
+    function checkQuiz(input, correctWord) {
+        const val = input.value.trim().toLowerCase();
+        const ans = correctWord.toLowerCase();
+        input.className = (val === ans) ? "quiz-input correct" : (val === "" ? "quiz-input" : "quiz-input wrong");
+    }
+
+    function toggleQuizUsage(btn) {
+        const usageDiv = btn.nextElementSibling;
+        const isHidden = usageDiv.style.display === "none" || usageDiv.style.display === "";
+        usageDiv.style.display = isHidden ? "block" : "none";
+        btn.innerText = isHidden ? "隱藏介系詞搭配/解答" : "查看介系詞搭配/解答";
+    }
+
+    // 新增：清除所有答案函式
+    function clearAllQuiz() {
+        if(confirm("確定要清空目前頁面上所有的測驗答案嗎？")) {
+            const inputs = document.querySelectorAll('.quiz-input');
+            inputs.forEach(input => {
+                input.value = "";
+                input.className = "quiz-input";
+            });
+        }
+    }
+
+    function render() {
+        const grid = document.getElementById('mainGrid');
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        grid.innerHTML = '';
+
+        vocabulary.forEach(([word, kk, pos, zh, usage]) => {
+            const status = wordStatus[word] || 'none';
+            if (currentFilter !== 'all' && status !== currentFilter) return;
+            if (!word.toLowerCase().includes(query) && !zh.toLowerCase().includes(query)) return;
+
+            const container = document.createElement('div');
+            
+            if (appMode === 'card') {
+                container.className = 'flashcard';
+                container.setAttribute('data-status', status);
+                container.onclick = function() { this.classList.toggle('flipped'); };
+                container.innerHTML = `
+                    <div class="flashcard-inner">
+                        <div class="card-front">
+                            <div class="word-eng">${word}</div>
+                            <div class="word-kk">${kk}</div>
+                            <button class="speak-btn" onclick="event.stopPropagation(); speak('${word.replace(/'/g, "\\'")}')">📢 發音</button>
+                        </div>
+                        <div class="card-back">
+                            <div class="word-zh">${zh}</div>
+                            <div style="color:var(--primary); font-weight:bold;">${pos}</div>
+                            <div class="word-usage">
+                                <span class="usage-tag">🔗 介系詞搭配:</span><br>${usage}
+                            </div>
+                            <div class="status-btns">
+                                <button class="btn-red ${status === 'hard' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'hard', event)">不熟</button>
+                                <button class="btn-orange ${status === 'mid' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'mid', event)">普通</button>
+                                <button class="btn-green ${status === 'easy' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'easy', event)">完美</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.className = 'quiz-card';
+                container.setAttribute('data-status', status);
+                container.innerHTML = `
+                    <div class="quiz-zh">${zh} <span style="font-size:0.8rem; color:#64748b;">(${pos})</span></div>
+                    <div style="font-size:0.8rem; color:#94a3b8;">提示: ${getPrompt(word)}</div>
+                    <input type="text" class="quiz-input" placeholder="拼寫英文..." oninput="checkQuiz(this, '${word.replace(/'/g, "\\'")}')">
+                    <button class="speak-btn" onclick="speak('${word.replace(/'/g, "\\'")}')">📢 聽音</button>
+                    <br>
+                    <button class="toggle-usage-btn" onclick="toggleQuizUsage(this)">查看介系詞搭配/解答</button>
+                    <div class="word-usage hidden-usage">
+                        <span class="usage-tag">🔗 答案與搭配:</span><br>
+                        <strong>${word}</strong><br>${usage}
+                    </div>
+                    <div class="status-btns">
+                        <button class="btn-red ${status === 'hard' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'hard')">不熟</button>
+                        <button class="btn-orange ${status === 'mid' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'mid')">普通</button>
+                        <button class="btn-green ${status === 'easy' ? 'selected' : ''}" onclick="toggleStatus('${word}', 'easy')">完美</button>
+                    </div>
+                `;
+            }
+            grid.appendChild(container);
+        });
+    }
+
+    function setFilter(filter, btn) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render();
+    }
+
+    render();
+</script>
+</body>
+</html>
